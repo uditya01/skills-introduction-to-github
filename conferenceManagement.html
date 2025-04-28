@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Conference Manager</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      color: #f0f0f0;
+      background: url('https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+      background-size: cover;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.5);
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 450px;
+      margin: 60px auto;
+      background-color: rgba(30, 30, 30, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #00000099;
+      position: relative;
+      z-index: 1;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+    }
+
+    input, textarea {
+      background-color: #333;
+      color: #fff;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: #bbb;
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .toggle-link {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .toggle-link a {
+      color: #00ffff;
+      cursor: pointer;
+    }
+
+    #dashboard {
+      margin-top: 20px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background-color: #2a2a2a;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+
+    li img {
+      width: 100%;
+      max-height: 150px;
+      object-fit: cover;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .doodle {
+      position: absolute;
+      width: 70px;
+      z-index: 0;
+      opacity: 0.6;
+      transition: transform 0.4s;
+    }
+
+    .doodle:hover {
+      transform: scale(1.1) rotate(5deg);
+    }
+
+    .d1 { top: 20px; left: 20px; }
+    .d2 { top: 30%; right: 20px; }
+    .d3 { bottom: 40px; left: 10%; }
+    .d4 { top: 70%; right: 10%; }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <img src="https://cdn-icons-png.flaticon.com/512/3759/3759521.png" class="doodle d1" />
+  <img src="https://cdn-icons-png.flaticon.com/512/3275/3275792.png" class="doodle d2" />
+  <img src="https://cdn-icons-png.flaticon.com/512/1484/1484815.png" class="doodle d3" />
+  <img src="https://cdn-icons-png.flaticon.com/512/147/147144.png" class="doodle d4" />
+
+  <div class="container">
+    <h2 id="formTitle">Login</h2>
+    <form id="loginForm">
+      <input type="text" placeholder="Username" id="loginUsername" required />
+      <input type="password" placeholder="Password" id="loginPassword" required />
+      <button type="submit">Login</button>
+    </form>
+
+    <form id="registerForm" class="hidden">
+      <input type="text" placeholder="Username" id="regUsername" required />
+      <input type="password" placeholder="Password" id="regPassword" required />
+      <button type="submit">Register</button>
+    </form>
+
+    <div class="toggle-link">
+      <a onclick="toggleForm()">Don't have an account? Register</a>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <h2>Welcome, <span id="userWelcome"></span>!</h2>
+      <form id="createConfForm">
+        <input type="text" id="confTitle" placeholder="Conference Title" required />
+        <input type="text" id="confDate" placeholder="Date (e.g. 2025-05-10)" required />
+        <input type="text" id="confLocation" placeholder="Location" required />
+        <textarea id="confDesc" placeholder="Description" required></textarea>
+        <input type="file" id="confImage" accept="image/*" />
+        <button type="submit">Create Conference</button>
+      </form>
+      <ul id="conferenceList"></ul>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const dashboard = document.getElementById('dashboard');
+    const formTitle = document.getElementById('formTitle');
+    const toggleLink = document.querySelector('.toggle-link a');
+
+    const user = localStorage.getItem('loggedInUser');
+    if (user) showDashboard(user);
+
+    function toggleForm() {
+      if (loginForm.classList.contains('hidden')) {
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+        formTitle.innerText = 'Login';
+        toggleLink.innerText = "Don't have an account? Register";
+      } else {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+        formTitle.innerText = 'Register';
+        toggleLink.innerText = "Already have an account? Login";
+      }
+    }
+
+    registerForm.onsubmit = function(e) {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value;
+      const password = document.getElementById('regPassword').value;
+      const users = JSON.parse(localStorage.getItem('users')) || {};
+      if (users[username]) {
+        alert('User already exists!');
+      } else {
+        users[username] = { password };
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('Registered! Now login.');
+        toggleForm();
+      }
+    };
+
+    loginForm.onsubmit = function(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      const users = JSON.parse(localStorage.getItem('users')) || {};
+      if (users[username] && users[username].password === password) {
+        localStorage.setItem('loggedInUser', username);
+        showDashboard(username);
+      } else {
+        alert('Invalid credentials!');
+      }
+    };
+
+    function showDashboard(user) {
+      document.getElementById('userWelcome').innerText = user;
+      loginForm.classList.add('hidden');
+      registerForm.classList.add('hidden');
+      formTitle.classList.add('hidden');
+      document.querySelector('.toggle-link').classList.add('hidden');
+      dashboard.classList.remove('hidden');
+      loadConferences();
+    }
+
+    function logout() {
+      localStorage.removeItem('loggedInUser');
+      location.reload();
+    }
+
+    document.getElementById('createConfForm').onsubmit = function(e) {
+      e.preventDefault();
+      const title = document.getElementById('confTitle').value;
+      const date = document.getElementById('confDate').value;
+      const locationVal = document.getElementById('confLocation').value;
+      const description = document.getElementById('confDesc').value;
+      const imageFile = document.getElementById('confImage').files[0];
+
+      const reader = new FileReader();
+      reader.onload = function() {
+        const imgData = reader.result;
+        const conferences = JSON.parse(localStorage.getItem('conferences')) || [];
+        conferences.push({
+          id: Date.now(),
+          title,
+          date,
+          location: locationVal,
+          description,
+          image: imgData,
+          attendees: []
+        });
+        localStorage.setItem('conferences', JSON.stringify(conferences));
+        loadConferences();
+        document.getElementById('createConfForm').reset();
+      };
+
+      if (imageFile) {
+        reader.readAsDataURL(imageFile);
+      } else {
+        reader.onload(); // Save without image
+      }
+    };
+
+    function loadConferences() {
+      const confList = document.getElementById('conferenceList');
+      const conferences = JSON.parse(localStorage.getItem('conferences')) || [];
+      const user = localStorage.getItem('loggedInUser');
+      confList.innerHTML = '';
+      conferences.forEach(conf => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>${conf.title}</strong><br/>
+          Date: ${conf.date}<br/>
+          Location: ${conf.location}<br/>
+          Description: ${conf.description}<br/>
+          Attendees: ${conf.attendees.length}<br/>
+          ${conf.image ? `<img src="${conf.image}" alt="Conference Image"/>` : ''}
+          <button onclick="registerForConference(${conf.id})">Register</button>
+          <button onclick="deleteConference(${conf.id})">Delete</button>
+        `;
+        confList.appendChild(li);
+      });
+    }
+
+    function registerForConference(id) {
+      const user = localStorage.getItem('loggedInUser');
+      const conferences = JSON.parse(localStorage.getItem('conferences')) || [];
+      const conf = conferences.find(c => c.id === id);
+      if (!conf.attendees.includes(user)) {
+        conf.attendees.push(user);
+        alert('Registered!');
+      } else {
+        alert('Already registered.');
+      }
+      localStorage.setItem('conferences', JSON.stringify(conferences));
+      loadConferences();
+    }
+
+    function deleteConference(id) {
+      const conferences = JSON.parse(localStorage.getItem('conferences')) || [];
+      const updated = conferences.filter(c => c.id !== id);
+      localStorage.setItem('conferences', JSON.stringify(updated));
+      loadConferences();
+    }
+  </script>
+</body>
+</html>
